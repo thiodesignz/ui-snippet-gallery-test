@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { Upload as UploadIcon, X, Figma } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '../hooks/useAuth';
+import { useBackend } from '../hooks/useBackend';
 
 export default function Upload() {
   const navigate = useNavigate();
+  const { isSignedIn } = useAuth();
   const { toast } = useToast();
+  const backend = useBackend();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,6 +27,47 @@ export default function Upload() {
   const [currentTag, setCurrentTag] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (data: {
+      title: string;
+      description?: string;
+      tags: string[];
+      imageData: string;
+      imageType: string;
+      plugUrl?: string;
+      figmaUrl?: string;
+    }) => {
+      return backend.snippets.create(data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Snippet uploaded!",
+        description: "Your UI snippet has been uploaded successfully.",
+      });
+      navigate('/');
+    },
+    onError: (error) => {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "There was an error uploading your snippet. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!isSignedIn) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Sign In Required</h1>
+          <p className="text-gray-600 mb-6">You need to sign in to upload snippets.</p>
+          <Button onClick={() => navigate('/login')}>Sign In</Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -63,7 +110,21 @@ export default function Upload() {
     return figmaPattern.test(url);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data URL prefix (e.g., "data:image/png;base64,")
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     if (!selectedFile) {
@@ -93,13 +154,25 @@ export default function Upload() {
       return;
     }
 
-    // Simulate upload success
-    toast({
-      title: "Snippet uploaded!",
-      description: "Your UI snippet has been uploaded successfully.",
-    });
-    
-    navigate('/');
+    try {
+      const imageData = await fileToBase64(selectedFile);
+      
+      uploadMutation.mutate({
+        title: formData.title,
+        description: formData.description || undefined,
+        tags: formData.tags,
+        imageData,
+        imageType: selectedFile.type,
+        plugUrl: formData.plugUrl || undefined,
+        figmaUrl: formData.figmaUrl || undefined,
+      });
+    } catch (error) {
+      toast({
+        title: "Error processing image",
+        description: "There was an error processing your image. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -250,8 +323,12 @@ export default function Upload() {
           </div>
 
           <div className="flex space-x-4">
-            <Button type="submit" className="flex-1">
-              Upload Snippet
+            <Button 
+              type="submit" 
+              className="flex-1"
+              disabled={uploadMutation.isPending}
+            >
+              {uploadMutation.isPending ? 'Uploading...' : 'Upload Snippet'}
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/')}>
               Cancel

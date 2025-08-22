@@ -1,19 +1,63 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Eye, ExternalLink, User, Figma, Copy } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Snippet } from '../types';
-import { mockUsers } from '../data/mockData';
+import { useAuth } from '../hooks/useAuth';
+import { useBackend } from '../hooks/useBackend';
+
+interface Snippet {
+  id: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  tags: string[];
+  imageUrl: string;
+  plugUrl: string | null;
+  figmaUrl: string | null;
+  likesCount: number;
+  viewsCount: number;
+  createdAt: string;
+}
 
 interface SnippetCardProps {
   snippet: Snippet;
 }
 
 export default function SnippetCard({ snippet }: SnippetCardProps) {
-  const user = mockUsers.find(u => u.id === snippet.userId);
+  const { isSignedIn } = useAuth();
   const { toast } = useToast();
+  const backend = useBackend();
+  const queryClient = useQueryClient();
+
+  const { data: user } = useQuery({
+    queryKey: ['user', snippet.userId],
+    queryFn: () => backend.users.getById({ id: snippet.userId }),
+  });
+
+  const { data: likeStatus } = useQuery({
+    queryKey: ['likeStatus', snippet.id],
+    queryFn: () => backend.snippets.getLikeStatus({ id: snippet.id }),
+    enabled: isSignedIn,
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: () => backend.snippets.like({ id: snippet.id }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['likeStatus', snippet.id], { liked: data.liked });
+      queryClient.setQueryData(['snippets'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          snippets: old.snippets.map((s: Snippet) =>
+            s.id === snippet.id ? { ...s, likesCount: data.likesCount } : s
+          ),
+        };
+      });
+    },
+  });
 
   const handleCopyToFigma = async () => {
     if (!snippet.figmaUrl) return;
@@ -31,6 +75,18 @@ export default function SnippetCard({ snippet }: SnippetCardProps) {
         variant: "destructive",
       });
     }
+  };
+
+  const handleLike = () => {
+    if (!isSignedIn) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to like snippets.",
+        variant: "destructive",
+      });
+      return;
+    }
+    likeMutation.mutate();
   };
 
   return (
@@ -72,20 +128,30 @@ export default function SnippetCard({ snippet }: SnippetCardProps) {
           <div className="flex items-center space-x-3">
             <Link to={`/profile/${user?.id}`} className="flex items-center space-x-2 hover:text-blue-600 transition-colors">
               <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="h-3 w-3 text-gray-600" />
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-6 h-6 rounded-full" />
+                ) : (
+                  <User className="h-3 w-3 text-gray-600" />
+                )}
               </div>
               <span className="text-sm font-medium text-gray-700">{user?.name}</span>
             </Link>
           </div>
           
           <div className="flex items-center space-x-3 text-sm text-gray-500">
-            <div className="flex items-center space-x-1">
-              <Heart className="h-4 w-4" />
-              <span>{snippet.likes}</span>
-            </div>
+            <button
+              onClick={handleLike}
+              className={`flex items-center space-x-1 hover:text-red-500 transition-colors ${
+                likeStatus?.liked ? 'text-red-500' : ''
+              }`}
+              disabled={likeMutation.isPending}
+            >
+              <Heart className={`h-4 w-4 ${likeStatus?.liked ? 'fill-current' : ''}`} />
+              <span>{snippet.likesCount}</span>
+            </button>
             <div className="flex items-center space-x-1">
               <Eye className="h-4 w-4" />
-              <span>{snippet.views}</span>
+              <span>{snippet.viewsCount}</span>
             </div>
           </div>
         </div>

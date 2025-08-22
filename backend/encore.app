@@ -1,0 +1,1 @@
+{"id": "ui-snippet-gallery-2q3i", "lang": "typescript"}

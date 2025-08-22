@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import SnippetGrid from '../components/SnippetGrid';
 import FilterBar from '../components/FilterBar';
-import { mockSnippets } from '../data/mockData';
+import { useBackend } from '../hooks/useBackend';
 
 export default function Home() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const backend = useBackend();
 
-  const filteredSnippets = mockSnippets.filter(snippet => {
-    const matchesSearch = searchQuery === '' || 
-      snippet.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      snippet.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      snippet.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesTags = selectedTags.length === 0 || 
-      selectedTags.some(tag => snippet.tags.includes(tag));
-    
-    return matchesSearch && matchesTags;
+  const { data: snippetsData, isLoading } = useQuery({
+    queryKey: ['snippets', searchQuery, selectedTags.join(',')],
+    queryFn: async () => {
+      const params: any = { limit: 50 };
+      if (searchQuery) params.search = searchQuery;
+      if (selectedTags.length > 0) params.tags = selectedTags.join(',');
+      
+      return backend.snippets.list(params);
+    },
   });
 
   return (
@@ -37,7 +38,13 @@ export default function Home() {
         onSearchChange={setSearchQuery}
       />
       
-      <SnippetGrid snippets={filteredSnippets} />
+      {isLoading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Loading snippets...</p>
+        </div>
+      ) : (
+        <SnippetGrid snippets={snippetsData?.snippets || []} />
+      )}
     </div>
   );
 }

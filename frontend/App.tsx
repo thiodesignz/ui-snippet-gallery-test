@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import SnippetDetail from './pages/SnippetDetail';
 import Profile from './pages/Profile';
 import Upload from './pages/Upload';
+import Login from './pages/Login';
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ function AppInner() {
             <Route path="/snippet/:id" element={<SnippetDetail />} />
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/login" element={<Login />} />
           </Routes>
         </main>
         <Toaster />
