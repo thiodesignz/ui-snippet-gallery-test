@@ -25,14 +25,15 @@ export default function Upload() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type.startsWith('image/')) {
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/svg+xml'];
+      if (validTypes.includes(file.type)) {
         setSelectedFile(file);
         const url = URL.createObjectURL(file);
         setPreviewUrl(url);
       } else {
         toast({
           title: "Invalid file type",
-          description: "Please select an image file (PNG, JPG, etc.)",
+          description: "Please select an image file (PNG, JPG, GIF, or SVG)",
           variant: "destructive",
         });
       }
@@ -140,13 +141,13 @@ export default function Upload() {
                     <p className="mb-2 text-sm text-gray-500">
                       <span className="font-semibold">Click to upload</span> or drag and drop
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG or GIF (MAX. 10MB)</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF, or SVG (MAX. 10MB)</p>
                   </div>
                   <input
                     id="image-upload"
                     type="file"
                     className="hidden"
-                    accept="image/*"
+                    accept="image/*,.svg"
                     onChange={handleFileSelect}
                   />
                 </label>
