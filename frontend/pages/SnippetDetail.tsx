@@ -1,14 +1,34 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Heart, Eye, ExternalLink, User, Calendar } from 'lucide-react';
+import { Heart, Eye, ExternalLink, User, Calendar, Figma, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import { mockSnippets, mockUsers } from '../data/mockData';
 
 export default function SnippetDetail() {
   const { id } = useParams<{ id: string }>();
   const snippet = mockSnippets.find(s => s.id === id);
   const user = snippet ? mockUsers.find(u => u.id === snippet.userId) : null;
+  const { toast } = useToast();
+
+  const handleCopyToFigma = async () => {
+    if (!snippet?.figmaUrl) return;
+    
+    try {
+      await navigator.clipboard.writeText(snippet.figmaUrl);
+      toast({
+        title: "Figma URL copied!",
+        description: "You can now paste this design into your Figma workspace.",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Unable to copy to clipboard. Please copy the URL manually.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!snippet || !user) {
     return (
@@ -57,6 +77,27 @@ export default function SnippetDetail() {
               <Badge key={tag} variant="secondary">{tag}</Badge>
             ))}
           </div>
+          
+          {snippet.figmaUrl && (
+            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Figma className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <h3 className="font-medium text-purple-900">Copy this design to Figma</h3>
+                    <p className="text-sm text-purple-700">Click to copy the Figma frame URL and paste it in your workspace</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleCopyToFigma}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex items-center space-x-2"
+                >
+                  <Copy className="h-4 w-4" />
+                  <span>Copy to Figma</span>
+                </Button>
+              </div>
+            </div>
+          )}
           
           <div className="flex items-center justify-between pt-6 border-t border-gray-200">
             <div className="flex items-center space-x-3">

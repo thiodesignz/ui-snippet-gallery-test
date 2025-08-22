@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Eye, ExternalLink, User } from 'lucide-react';
+import { Heart, Eye, ExternalLink, User, Figma, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import { Snippet } from '../types';
 import { mockUsers } from '../data/mockData';
 
@@ -12,6 +13,25 @@ interface SnippetCardProps {
 
 export default function SnippetCard({ snippet }: SnippetCardProps) {
   const user = mockUsers.find(u => u.id === snippet.userId);
+  const { toast } = useToast();
+
+  const handleCopyToFigma = async () => {
+    if (!snippet.figmaUrl) return;
+    
+    try {
+      await navigator.clipboard.writeText(snippet.figmaUrl);
+      toast({
+        title: "Figma URL copied!",
+        description: "You can now paste this design into your Figma workspace.",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the URL manually from the detail page.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -48,7 +68,7 @@ export default function SnippetCard({ snippet }: SnippetCardProps) {
           )}
         </div>
         
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
             <Link to={`/profile/${user?.id}`} className="flex items-center space-x-2 hover:text-blue-600 transition-colors">
               <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
@@ -70,16 +90,29 @@ export default function SnippetCard({ snippet }: SnippetCardProps) {
           </div>
         </div>
         
-        {snippet.plugUrl && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="space-y-2">
+          {snippet.figmaUrl && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full flex items-center justify-center space-x-2 bg-purple-50 border-purple-200 hover:bg-purple-100"
+              onClick={handleCopyToFigma}
+            >
+              <Figma className="h-3 w-3 text-purple-600" />
+              <Copy className="h-3 w-3 text-purple-600" />
+              <span className="text-purple-700">Copy to Figma</span>
+            </Button>
+          )}
+          
+          {snippet.plugUrl && (
             <a href={snippet.plugUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="w-full flex items-center justify-center space-x-2">
                 <ExternalLink className="h-3 w-3" />
                 <span>View Project</span>
               </Button>
             </a>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

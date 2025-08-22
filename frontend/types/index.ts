@@ -14,6 +14,7 @@ export interface Snippet {
   tags: string[];
   imageUrl: string;
   plugUrl?: string;
+  figmaUrl?: string;
   likes: number;
   views: number;
   createdAt: string;

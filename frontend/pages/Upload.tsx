@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload as UploadIcon, X } from 'lucide-react';
+import { Upload as UploadIcon, X, Figma } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ export default function Upload() {
     title: '',
     description: '',
     plugUrl: '',
+    figmaUrl: '',
     tags: [] as string[],
   });
   const [currentTag, setCurrentTag] = useState('');
@@ -55,6 +56,12 @@ export default function Upload() {
     }));
   };
 
+  const validateFigmaUrl = (url: string) => {
+    if (!url) return true; // Optional field
+    const figmaPattern = /^https:\/\/(www\.)?figma\.com\/(file|proto|design)\/[a-zA-Z0-9]+/;
+    return figmaPattern.test(url);
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -71,6 +78,15 @@ export default function Upload() {
       toast({
         title: "Title required",
         description: "Please enter a title for your snippet",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.figmaUrl && !validateFigmaUrl(formData.figmaUrl)) {
+      toast({
+        title: "Invalid Figma URL",
+        description: "Please enter a valid Figma file, prototype, or design URL",
         variant: "destructive",
       });
       return;
@@ -160,6 +176,24 @@ export default function Upload() {
               className="mt-2"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="figma-url" className="flex items-center space-x-2">
+              <Figma className="h-4 w-4" />
+              <span>Figma Frame URL (Optional)</span>
+            </Label>
+            <Input
+              id="figma-url"
+              type="url"
+              value={formData.figmaUrl}
+              onChange={(e) => setFormData(prev => ({ ...prev, figmaUrl: e.target.value }))}
+              placeholder="https://www.figma.com/file/..."
+              className="mt-2"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Paste your Figma frame URL so others can copy this design to their Figma workspace
+            </p>
           </div>
 
           <div>
